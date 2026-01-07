@@ -1,10 +1,11 @@
-﻿using BookStoreManagmentSystem.Models;
+﻿using BookStoreManagmentSystem.DTO_s;
+using BookStoreManagmentSystem.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.JsonPatch;
-using BookStoreManagmentSystem.DTO_s;
+using static System.Reflection.Metadata.BlobBuilder;
 
 namespace BookStoreManagmentSystem.Controllers
 {
@@ -23,9 +24,21 @@ namespace BookStoreManagmentSystem.Controllers
 
         [HttpGet]
 
-        public async Task<ActionResult<IEnumerable<Books>>> GetBooks()
+        public async Task<ActionResult<IEnumerable<BookResponseDto>>> GetBooks()
         {
-            return await _context.Books.Include(e => e.Author).ToListAsync();
+            var Books = await _context.Books.Include(a => a.Author).Select( a => new BookResponseDto { 
+            Id = a.Id,
+            Title = a.Title,
+            Author = a.Author.Name,
+            Price = a.Price,
+            StockQuantity = a.StockQuantity,
+            Category = a.Category,
+            }).ToListAsync();
+
+            if (!Books.Any())
+                return NotFound();
+
+            return Ok(Books);
         }
 
         [HttpGet("{id}")]
@@ -43,13 +56,13 @@ namespace BookStoreManagmentSystem.Controllers
                 Id = author.Id,
                 Name = author.Name,
                 Books = author.Books.Select(b => new BookResponseDto
-                {
-                    Id = b.Id,
-                    Title = b.Title,
-                    Price = b.Price,
-                    StockQuantity = b.StockQuantity,
-                    Category = b.Category
-                }).ToList()
+                    {
+                        Id = b.Id,
+                        Title = b.Title,
+                        Price = b.Price,
+                        StockQuantity = b.StockQuantity,
+                        Category = b.Category
+                    }).ToList()
             });
         }
 
