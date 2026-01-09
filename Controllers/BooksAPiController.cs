@@ -24,9 +24,12 @@ namespace BookStoreManagmentSystem.Controllers
 
         [HttpGet]
 
-        public async Task<ActionResult<IEnumerable<BookResponseDto>>> GetBooks()
+        public async Task<ActionResult<BookResponseDto>> GetBooks(int page, int pageSize)
         {
-            var Books = await _context.Books.Include(a => a.Author).Select( a => new BookResponseDto { 
+            var TotalCount = _context.Books.Count();
+            var TotalPages = (int)Math.Ceiling((decimal)TotalCount / pageSize);
+            //var BooksPerPage = Books.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            var Books = await _context.Books.Skip((page - 1) * pageSize).Take(pageSize).Include(a => a.Author).Select( a => new BookResponseDto { 
             Id = a.Id,
             Title = a.Title,
             Author = a.Author.Name,
@@ -34,7 +37,9 @@ namespace BookStoreManagmentSystem.Controllers
             StockQuantity = a.StockQuantity,
             Category = a.Category,
             }).ToListAsync();
-
+            //var TotalCount = Books.Count();
+            //var TotalPages = (int)Math.Ceiling((decimal)TotalCount / pageSize);
+            //var BooksPerPage = Books.Skip((page - 1) * pageSize).Take(pageSize).ToList();
             if (!Books.Any())
                 return NotFound();
 
