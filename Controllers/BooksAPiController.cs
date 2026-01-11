@@ -1,9 +1,12 @@
-﻿using BookStoreManagmentSystem.DTO_s;
+﻿using BookStoreManagmentSystem.Caching;
+using BookStoreManagmentSystem.DTO_s;
 using BookStoreManagmentSystem.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using NuGet.Packaging.Signing;
 using System.Threading.Tasks;
 using static System.Reflection.Metadata.BlobBuilder;
 
@@ -16,30 +19,53 @@ namespace BookStoreManagmentSystem.Controllers
     public class BooksAPiController : ControllerBase
     {
         private readonly BookStoreDBContext _context;
+        private readonly IMemoryCache _cache;
 
-        public BooksAPiController(BookStoreDBContext context)
+        public BooksAPiController(BookStoreDBContext context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         [HttpGet]
-
-        public async Task<ActionResult<BookResponseDto>> GetBooks(int page, int pageSize)
+        public async Task<ActionResult<BookResponseDto>> GetBooksFromDB(int page = 1, int pageSize = 10)
         {
+            if (page <= 0 && pageSize <= 0)
+            {
+                return BadRequest("Invalid pagination params");
+            }
+
+            string cacheKey = $"books_page_{page}_size_{pageSize}";
             var TotalCount = _context.Books.Count();
             var TotalPages = (int)Math.Ceiling((decimal)TotalCount / pageSize);
-            //var BooksPerPage = Books.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-            var Books = await _context.Books.Skip((page - 1) * pageSize).Take(pageSize).Include(a => a.Author).Select( a => new BookResponseDto { 
-            Id = a.Id,
-            Title = a.Title,
-            Author = a.Author.Name,
-            Price = a.Price,
-            StockQuantity = a.StockQuantity,
-            Category = a.Category,
-            }).ToListAsync();
-            //var TotalCount = Books.Count();
-            //var TotalPages = (int)Math.Ceiling((decimal)TotalCount / pageSize);
-            //var BooksPerPage = Books.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            var Books = await _cache.GetOrCreateAsync(cacheKey, async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60);
+                entry.SlidingExpiration = TimeSpan.FromSeconds(60);
+                entry.Priority = CacheItemPriority.Normal;
+
+                return await _context.Books.AsNoTracking().Include(a => a.Author).OrderBy(a => a.Id).Skip((page - 1)*pageSize).Take(pageSize).Select(a => new BookResponseDto
+                {
+                    Id = a.Id,
+                    Title = a.Title,
+                    Author = a.Author.Name,
+                    Price = a.Price,
+                    StockQuantity = a.StockQuantity,
+                    Category = a.Category,
+                }).ToListAsync();
+            });
+
+            //var Books = await _context.Books.Skip((page - 1) * pageSize).Take(pageSize).Include(a => a.Author).Select(a => new BookResponseDto
+            //{
+            //    Id = a.Id,
+            //    Title = a.Title,
+            //    Author = a.Author.Name,
+            //    Price = a.Price,
+            //    StockQuantity = a.StockQuantity,
+            //    Category = a.Category,
+            //}).ToListAsync();
+           
             if (!Books.Any())
                 return NotFound();
 
