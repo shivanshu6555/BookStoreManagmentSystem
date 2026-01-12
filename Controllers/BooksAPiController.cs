@@ -5,10 +5,15 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using Newtonsoft.Json;
 using NuGet.Packaging.Signing;
+using NuGet.Versioning;
+using System.Text.Json;
 using System.Threading.Tasks;
 using static System.Reflection.Metadata.BlobBuilder;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace BookStoreManagmentSystem.Controllers
 {
@@ -19,9 +24,9 @@ namespace BookStoreManagmentSystem.Controllers
     public class BooksAPiController : ControllerBase
     {
         private readonly BookStoreDBContext _context;
-        private readonly IMemoryCache _cache;
+        private readonly IDistributedCache _cache;
 
-        public BooksAPiController(BookStoreDBContext context, IMemoryCache cache)
+        public BooksAPiController(BookStoreDBContext context, IDistributedCache cache)
         {
             _context = context;
             _cache = cache;
@@ -39,35 +44,53 @@ namespace BookStoreManagmentSystem.Controllers
             var TotalCount = _context.Books.Count();
             var TotalPages = (int)Math.Ceiling((decimal)TotalCount / pageSize);
 
-            var Books = await _cache.GetOrCreateAsync(cacheKey, async entry =>
+            var CachedData = await _cache.GetStringAsync(cacheKey);
+
+            if (!string.IsNullOrEmpty(CachedData))
             {
-                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60);
-                entry.SlidingExpiration = TimeSpan.FromSeconds(60);
-                entry.Priority = CacheItemPriority.Normal;
+                var CachedBooks = JsonSerializer.Deserialize<List<BookResponseDto>>(CachedData);
 
-                return await _context.Books.AsNoTracking().Include(a => a.Author).OrderBy(a => a.Id).Skip((page - 1)*pageSize).Take(pageSize).Select(a => new BookResponseDto
-                {
-                    Id = a.Id,
-                    Title = a.Title,
-                    Author = a.Author.Name,
-                    Price = a.Price,
-                    StockQuantity = a.StockQuantity,
-                    Category = a.Category,
-                }).ToListAsync();
-            });
+                return Ok(CachedBooks);
+            }
 
-            //var Books = await _context.Books.Skip((page - 1) * pageSize).Take(pageSize).Include(a => a.Author).Select(a => new BookResponseDto
+            //var Books = await _cache.GetOrCreateAsync(cacheKey, async entry =>
             //{
-            //    Id = a.Id,
-            //    Title = a.Title,
-            //    Author = a.Author.Name,
-            //    Price = a.Price,
-            //    StockQuantity = a.StockQuantity,
-            //    Category = a.Category,
-            //}).ToListAsync();
-           
+            //    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60);
+            //    entry.SlidingExpiration = TimeSpan.FromSeconds(60);
+            //    entry.Priority = CacheItemPriority.Normal;
+
+            //    return await _context.Books.AsNoTracking().Include(a => a.Author).OrderBy(a => a.Id).Skip((page - 1)*pageSize).Take(pageSize).Select(a => new BookResponseDto
+            //    {
+            //        Id = a.Id,
+            //        Title = a.Title,
+            //        Author = a.Author.Name,
+            //        Price = a.Price,
+            //        StockQuantity = a.StockQuantity,
+            //        Category = a.Category,
+            //    }).ToListAsync();
+            //});
+
+            var Books = await _context.Books.AsNoTracking().OrderBy(a => a.Id).Skip((page - 1) * pageSize).Take(pageSize).Include(a => a.Author).Select(a => new BookResponseDto
+            {
+                Id = a.Id,
+                Title = a.Title,
+                Author = a.Author.Name,
+                Price = a.Price,
+                StockQuantity = a.StockQuantity,
+                Category = a.Category,
+            }).ToListAsync();
+
             if (!Books.Any())
                 return NotFound();
+
+            var cacheOptions = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60),
+                SlidingExpiration = TimeSpan.FromSeconds(60)
+            };
+
+            var SerializedData = JsonSerializer.Serialize(Books);
+            await _cache.SetStringAsync(cacheKey, SerializedData, cacheOptions);
 
             return Ok(Books);
         }
