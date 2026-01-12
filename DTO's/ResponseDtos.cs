@@ -18,4 +18,10 @@ namespace BookStoreManagmentSystem.DTO_s
         public int StockQuantity { get; set; }
         public BookCategory Category { get; set; }
     }
+
+    public record struct UserResponseDto
+    {
+        public int Id { get; set; }
+        public string Username { get; set; }
+    }
 }

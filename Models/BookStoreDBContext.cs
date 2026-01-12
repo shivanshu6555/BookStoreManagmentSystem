@@ -7,7 +7,7 @@ namespace BookStoreManagmentSystem.Models
     {
         public DbSet<Books> Books { get; set; }
         public DbSet<Author> Authors { get; set; }
-
+        public DbSet<User> Users { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Books>().Property(e => e.Category).HasConversion<string>();
