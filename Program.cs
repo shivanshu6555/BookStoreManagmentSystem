@@ -2,6 +2,7 @@ using BookStoreManagmentSystem.Models;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
+using BookStoreManagmentSystem.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +19,7 @@ builder.Services.AddStackExchangeRedisCache(options =>
     options.InstanceName = "BookStore";
 
 });
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddDbContext<BookStoreDBContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DevConnection")));
 var app = builder.Build();
 

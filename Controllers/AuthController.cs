@@ -1,10 +1,15 @@
 ﻿using BookStoreManagmentSystem.DTO_s;
 using BookStoreManagmentSystem.Models;
+using BookStoreManagmentSystem.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace BookStoreManagmentSystem.Controllers
 {
@@ -13,40 +18,36 @@ namespace BookStoreManagmentSystem.Controllers
     public class AuthController : ControllerBase
     {
 
+        private readonly IAuthService _authService;
         private readonly BookStoreDBContext _context;
-
-        public AuthController(BookStoreDBContext context)
+        public AuthController(IAuthService authService, BookStoreDBContext context)
         {
+            _authService = authService;
             _context = context;
         }
 
         [HttpPost("Register")]
         public async Task<ActionResult<User>> Register(UserDto request)
         {
-            User user = new();
-            var hashedPassword = new PasswordHasher<User>().HashPassword(user, request.Password);
+            var user = await _authService.RegisterAsync(request);
+            if (user is null)
+            {
+                return BadRequest("please login");
+            }
 
-            user.Username = request.Username;
-            user.PAsswordHash = hashedPassword;
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-            return Ok(user);
+            return user;
         }
 
         [HttpPost("Login")]
-        public async Task<ActionResult<User>> Login(UserDto request)
+        public async Task<ActionResult<string>> Login(UserDto request)
         {
-            User user = new();
-            user = await _context.Users.FirstOrDefaultAsync(a => a.Username == request.Username);
-            if (user == null)
-                return BadRequest("Invalid User");
-
-            if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PAsswordHash, request.Password) == PasswordVerificationResult.Failed)
+            var token = await _authService.LoginAsync(request);
+            if (token is null)
             {
-                return BadRequest("Wrong password");
+                return BadRequest("invalid username or password");
             }
 
-            return Ok("User logged in");
+            return token;
         }
 
         [HttpGet]
