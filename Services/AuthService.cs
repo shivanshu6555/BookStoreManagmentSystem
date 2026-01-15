@@ -38,6 +38,7 @@ namespace BookStoreManagmentSystem.Services
 
             user.Username = request.Username;
             user.PAsswordHash = hashedPassword;
+            user.Role = request.Role;
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
             return user;
@@ -47,7 +48,9 @@ namespace BookStoreManagmentSystem.Services
         {
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name, user.Username)
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Role, user.Role)
             };
 
             var key = new SymmetricSecurityKey(

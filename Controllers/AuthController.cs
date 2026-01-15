@@ -1,6 +1,7 @@
 ﻿using BookStoreManagmentSystem.DTO_s;
 using BookStoreManagmentSystem.Models;
 using BookStoreManagmentSystem.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -50,7 +51,16 @@ namespace BookStoreManagmentSystem.Controllers
             return token;
         }
 
-        [HttpGet]
+        [HttpDelete]
+        public async Task<ActionResult> RemoveUser(int id)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(a => a.Id == id);
+            _context.Remove(user);
+            _context.SaveChangesAsync();
+            return Ok(user + "Removed");
+        }
+
+        [HttpGet("User")]
         public async Task<ActionResult<User>> GetUser()
         {
             var users = _context.Users.Select(a => new UserResponseDto
@@ -60,6 +70,20 @@ namespace BookStoreManagmentSystem.Controllers
             }).ToList();
 
             return Ok(users);
+        }
+
+        [Authorize]
+        [HttpGet]
+        public IActionResult AuthenticatedOnlyEndpoint()
+        {
+            return Ok("You are authenticated");
+        }
+
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        [HttpGet("Admin-login")]
+        public IActionResult AdminOnlyEndpoint()
+        {
+            return Ok("You are legged in as Admin");
         }
     }
 }
