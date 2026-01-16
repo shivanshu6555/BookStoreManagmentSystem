@@ -24,4 +24,17 @@ namespace BookStoreManagmentSystem.DTO_s
         public int Id { get; set; }
         public string Username { get; set; }
     }
+
+    public record struct PaginationDto
+    {
+        public int TotalPages { get; set; }
+        public int CurrentPage { get; set; }
+        public int PageSize { get; set; }
+    }
+
+    public class PagedBooksResponseDto
+    {
+        public PaginationDto Pagination { get; set; }
+        public List<BookResponseDto> Data { get; set; }
+    }
 }

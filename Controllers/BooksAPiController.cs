@@ -33,7 +33,7 @@ namespace BookStoreManagmentSystem.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<BookResponseDto>> GetBooksFromDB(int page = 1, int pageSize = 10)
+        public async Task<ActionResult<PagedBooksResponseDto>> GetBooksFromDB(int page = 1, int pageSize = 10)
         {
             if (page <= 0 && pageSize <= 0)
             {
@@ -48,8 +48,7 @@ namespace BookStoreManagmentSystem.Controllers
 
             if (!string.IsNullOrEmpty(CachedData))
             {
-                var CachedBooks = JsonSerializer.Deserialize<List<BookResponseDto>>(CachedData);
-
+                var CachedBooks = JsonSerializer.Deserialize<PagedBooksResponseDto>(CachedData);
                 return Ok(CachedBooks);
             }
 
@@ -89,10 +88,21 @@ namespace BookStoreManagmentSystem.Controllers
                 SlidingExpiration = TimeSpan.FromSeconds(60)
             };
 
-            var SerializedData = JsonSerializer.Serialize(Books);
+            var response = new PagedBooksResponseDto()
+            {
+                Pagination = new PaginationDto()
+                {
+                    TotalPages = TotalPages,
+                    CurrentPage = page,
+                    PageSize = pageSize
+                },
+                Data = Books
+            };
+            var SerializedData = JsonSerializer.Serialize(response);
             await _cache.SetStringAsync(cacheKey, SerializedData, cacheOptions);
 
-            return Ok(Books);
+
+            return Ok(response);
         }
 
         [HttpGet("{id}")]
