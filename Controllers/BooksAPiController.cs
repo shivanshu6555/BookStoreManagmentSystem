@@ -1,6 +1,7 @@
 ﻿using BookStoreManagmentSystem.Caching;
 using BookStoreManagmentSystem.DTO_s;
 using BookStoreManagmentSystem.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
@@ -24,7 +25,7 @@ namespace BookStoreManagmentSystem.Controllers
     public class BooksAPiController : ControllerBase
     {
         private readonly BookStoreDBContext _context;
-        private readonly IDistributedCache _cache;
+        private readonly IDistributedCache _cache;      
 
         public BooksAPiController(BookStoreDBContext context, IDistributedCache cache)
         {
@@ -124,10 +125,27 @@ namespace BookStoreManagmentSystem.Controllers
                         Id = b.Id,
                         Title = b.Title,
                         Price = b.Price,
+                        Author = author.Name,
                         StockQuantity = b.StockQuantity,
                         Category = b.Category
                     }).ToList()
             });
+        }
+
+        [HttpGet("GetAuthors")]
+        public async Task<ActionResult<AuthorResponseDto>> GetAuthors()
+        {
+            var Authors = _context.Authors.AsNoTracking().Include(a => a.Books).Select(a => new AuthorResponseDto
+            {
+                Id = a.Id,
+                Name = a.Name,
+                Books = a.Books.Select(a => new BookResponseDto { Title = a.Title, Price = a.Price, Category = a.Category, Author = a.Author.Name }).ToList()
+            });
+
+            if (Authors == null)
+                return NotFound();
+
+            return Ok(Authors);
         }
 
 
@@ -173,6 +191,7 @@ namespace BookStoreManagmentSystem.Controllers
 
         }
 
+        [Authorize]
         [HttpPut("{id}")]
         public async Task<ActionResult<Books>> PutBooks(int id, Books updatedBook)
         {
