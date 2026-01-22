@@ -150,13 +150,6 @@ namespace BookStoreManagmentSystem.Controllers
 
 
         [HttpPost]
-
-        //public async Task<ActionResult<Books>> PostBooks(Books books)
-        //{
-        //    _context.Books.Add(books);
-        //    await _context.SaveChangesAsync();
-        //    return Ok(await _context.Books.ToListAsync());
-        //}
         public async Task<ActionResult<Books>> PostBooks(CreateAuthorDto request)
         {
             var newAuthor = new Author
@@ -164,7 +157,7 @@ namespace BookStoreManagmentSystem.Controllers
                 Name = request.Name,
             };
 
-            var books = request.Books.Select(b => new Books { Title = b.Title, Price = b.price, StockQuantity = b.stockq, Category = b.category, Author = newAuthor });
+            var books = request.Books.Select(b => new Books { Title = b.Title, Price = b.price, StockQuantity = b.stockquantity, Category = b.category, Author = newAuthor });
 
             newAuthor.Books = books.ToList();
 
