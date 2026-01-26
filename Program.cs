@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Configuration;
 using System.Text;
+using BookStoreManagmentSystem;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,10 +40,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
             ValidateIssuerSigningKey = true
         };
     });
+builder.Services.AddExceptionHandler<GlobalExceptionHandling>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())  
 {
     app.MapOpenApi();
 
@@ -52,6 +54,7 @@ if (app.Environment.IsDevelopment())
         options.Theme = ScalarTheme.DeepSpace;
     });
 }
+app.UseExceptionHandler(_ => { });
 
 app.UseHttpsRedirection();
 

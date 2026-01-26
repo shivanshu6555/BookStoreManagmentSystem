@@ -85,5 +85,12 @@ namespace BookStoreManagmentSystem.Controllers
         {
             return Ok("You are legged in as Admin");
         }
+
+        [Authorize(Roles = "User")]
+        [HttpGet("User-login")]
+        public IActionResult UserOnlyEndpoint()
+        {
+            return Ok("You are legged in as user");
+        }
     }
 }

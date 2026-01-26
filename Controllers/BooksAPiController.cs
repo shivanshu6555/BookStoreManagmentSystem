@@ -45,14 +45,23 @@ namespace BookStoreManagmentSystem.Controllers
             var TotalCount = _context.Books.Count();
             var TotalPages = (int)Math.Ceiling((decimal)TotalCount / pageSize);
 
-            var CachedData = await _cache.GetStringAsync(cacheKey);
-
-            if (!string.IsNullOrEmpty(CachedData))
+            try
             {
-                var CachedBooks = JsonSerializer.Deserialize<PagedBooksResponseDto>(CachedData);
-                return Ok(CachedBooks);
+                var CachedData = await _cache.GetStringAsync(cacheKey);
+                if (!string.IsNullOrEmpty(CachedData))
+                {
+                    var CachedBooks = JsonSerializer.Deserialize<PagedBooksResponseDto>(CachedData);
+                    return Ok(CachedBooks);
+                }
+
+            }
+            catch (Exception)
+            {
+
+                throw new Exception("Redis server not working");
             }
 
+            
             //var Books = await _cache.GetOrCreateAsync(cacheKey, async entry =>
             //{
             //    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60);
